@@ -35,4 +35,5 @@ using schema validation, domain routing, and traceable request handling.
 ## API Endpoints
 
 ### Health Check
+"Used for load balancers and container health probes"
 
