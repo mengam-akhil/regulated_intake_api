@@ -44,3 +44,10 @@ using schema validation, domain routing, and traceable request handling.
 -SQLite-backed document traceability
 -Audit logs for regulatory reconstruction
 This enables full regulatory tracebility and post-event reconstruction of ingestion decisions 
+# Regulated Intake API
+
+![CI](https://github.com/mengam-akhil/regulated-intake-api/actions/workflows/ci.yml/badge.svg)
+![Security](https://img.shields.io/badge/security-pip--audit-blue)
+![Python](https://img.shields.io/badge/python-3.11-blue)
+
+A secure, audit-ready API for regulated data ingestion with validation, logging, and CI/CD.
