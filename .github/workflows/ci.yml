@@ -26,9 +26,8 @@ jobs:
 
       - name: Run tests
         run: |
-          pytest
+          pytest -q
 
       - name: Security scan (pip-audit)
         run: |
-          pip install pip-audit
-          pip-audit
+         pip-audit
