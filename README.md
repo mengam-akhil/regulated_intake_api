@@ -84,3 +84,17 @@ Verification steps:
 
 This satisfies GDPR Article 32 (Security of Processing)
 and data residency requirements for EU/CH RegTech systems.
+## Day 25 — Data Lineage & Ingestion Traceability
+
+All incoming documents are recorded as immutable ingestion events using an
+append-only event log inspired by Kafka-style architectures.
+
+Each event contains:
+- Unique event_id
+- Source system identifier
+- Document ID
+- Cryptographic payload hash
+- UTC timestamp
+
+This enables full reconstruction of data origin and satisfies audit and
+data lineage requirements for EU/Swiss RegTech systems.
