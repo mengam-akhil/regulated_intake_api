@@ -136,3 +136,15 @@ Key design principles:
 
 This enables predictable behavior for local, GDPR-compliant deployments
 without reliance on cloud-scale resources.
+## Day 29 — Defensive Engineering & Input Validation
+
+The ingestion API includes a defensive security layer that validates all
+incoming input before processing.
+
+Protections include:
+- Prompt injection pattern detection
+- Input length limits
+- Explicit rejection of suspicious instructions
+
+This ensures a fail-closed posture suitable for production AI systems in
+regulated banking environments.

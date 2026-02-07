@@ -21,6 +21,9 @@ from core.legal.agentic_router import cross_verify_lawfulness, Decision
 # Day 28 — performance profiling
 from core.performance.profiler import profile_block
 
+# Day 29 — defensive input validation
+from core.security.input_guard import validate_input
+
 router = APIRouter()
 
 ALLOWED_DOMAINS = {"banking", "fintech", "insurance"}
@@ -34,9 +37,34 @@ def ingest(
 ):
     request_id = str(uuid4())
 
-    # ------------------------------------------------
-    # Rule 1: Invalid document_id
-    # ------------------------------------------------
+    # =================================================
+    # Day 29 — Defensive input validation (FAIL CLOSED)
+    # =================================================
+    try:
+        validate_input(payload.dict())
+    except ValueError as e:
+        write_audit_log(
+            db=db,
+            document_id=None,
+            action="INGEST_BLOCKED",
+            status="REJECTED",
+            actor="system",
+            request_id=request_id,
+            error_code="INPUT_VALIDATION_FAILED",
+        )
+
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "status": "blocked",
+                "reason": str(e),
+                "request_id": request_id,
+            },
+        )
+
+    # =================================================
+    # Rule 1 — Invalid document_id
+    # =================================================
     if payload.document_id <= 0:
         write_audit_log(
             db=db,
@@ -58,9 +86,9 @@ def ingest(
             },
         )
 
-    # ------------------------------------------------
-    # Rule 2: Unsupported domain
-    # ------------------------------------------------
+    # =================================================
+    # Rule 2 — Unsupported domain
+    # =================================================
     if payload.domain not in ALLOWED_DOMAINS:
         write_audit_log(
             db=db,
@@ -82,22 +110,22 @@ def ingest(
             },
         )
 
-    # =========================================================
-    # Day 28 — Performance-profiled ingestion pipeline
-    # =========================================================
+    # =================================================
+    # Day 28 — Performance profiling (edge-aware)
+    # =================================================
     with profile_block("ingest_pipeline"):
 
-        # -----------------------------------------------------
+        # =================================================
         # Day 26 — PII Tokenization (GDPR Art. 5)
-        # -----------------------------------------------------
+        # =================================================
         pii_token = None
         if hasattr(payload, "customer_email") and payload.customer_email:
             pii_token = tokenize_pii(payload.customer_email)
-            # Raw PII stops here — never persisted
+            # Raw PII stops here
 
-        # -----------------------------------------------------
-        # Day 27 — Legal Cross-Verification (GDPR × Swiss FADP)
-        # -----------------------------------------------------
+        # =================================================
+        # Day 27 — Legal Cross-Verification (GDPR × FADP)
+        # =================================================
         legal_context = {
             "gdpr_applies": payload.domain in {"banking", "fintech"},
             "fadp_applies": payload.domain == "banking",
@@ -128,9 +156,9 @@ def ingest(
                 },
             )
 
-        # -----------------------------------------------------
+        # =================================================
         # Day 25 — Kafka-style ingestion lineage event
-        # -----------------------------------------------------
+        # =================================================
         payload_hash = hashlib.sha256(
             json.dumps(payload.dict(), sort_keys=True).encode()
         ).hexdigest()
@@ -142,9 +170,9 @@ def ingest(
             actor="system",
         )
 
-        # -----------------------------------------------------
+        # =================================================
         # Business audit log
-        # -----------------------------------------------------
+        # =================================================
         write_audit_log(
             db=db,
             document_id=payload.document_id,
