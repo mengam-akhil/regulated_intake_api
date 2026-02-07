@@ -123,3 +123,16 @@ The router evaluates:
 
 Decisions are explicitly routed as ALLOW, REVIEW, or BLOCK with
 human-readable reasons, ensuring explainable and auditable compliance.
+## Day 28 — Performance Profiling & Edge Optimization
+
+The system includes lightweight, local-first performance profiling to
+measure latency and peak memory usage on constrained hardware (≤4GB RAM).
+
+Key design principles:
+- Explicit latency measurement
+- Peak memory tracking
+- Model size vs performance trade-off awareness
+- Quantized inference (INT8 / INT4) as the preferred deployment strategy
+
+This enables predictable behavior for local, GDPR-compliant deployments
+without reliance on cloud-scale resources.

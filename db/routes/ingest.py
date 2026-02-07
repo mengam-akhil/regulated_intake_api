@@ -18,6 +18,9 @@ from core.privacy.pii_tokenizer import tokenize_pii
 # Day 27 — legal agentic router
 from core.legal.agentic_router import cross_verify_lawfulness, Decision
 
+# Day 28 — performance profiling
+from core.performance.profiler import profile_block
+
 router = APIRouter()
 
 ALLOWED_DOMAINS = {"banking", "fintech", "insurance"}
@@ -79,73 +82,78 @@ def ingest(
             },
         )
 
-    # =================================================
-    # Day 26 — PII Tokenization (GDPR Art. 5)
-    # =================================================
-    pii_token = None
-    if hasattr(payload, "customer_email") and payload.customer_email:
-        pii_token = tokenize_pii(payload.customer_email)
-        # Raw PII is never stored beyond this point
+    # =========================================================
+    # Day 28 — Performance-profiled ingestion pipeline
+    # =========================================================
+    with profile_block("ingest_pipeline"):
 
-    # =================================================
-    # Day 27 — Legal Cross-Verification (GDPR × Swiss FADP)
-    # =================================================
-    legal_context = {
-        "gdpr_applies": payload.domain in {"banking", "fintech"},
-        "fadp_applies": payload.domain == "banking",
-        "has_consent": getattr(payload, "has_consent", False),
-        "pii_tokenized": pii_token is not None,
-        "rtbf_supported": True,  # supported via Day 26 design
-    }
+        # -----------------------------------------------------
+        # Day 26 — PII Tokenization (GDPR Art. 5)
+        # -----------------------------------------------------
+        pii_token = None
+        if hasattr(payload, "customer_email") and payload.customer_email:
+            pii_token = tokenize_pii(payload.customer_email)
+            # Raw PII stops here — never persisted
 
-    legal_result = cross_verify_lawfulness(legal_context)
+        # -----------------------------------------------------
+        # Day 27 — Legal Cross-Verification (GDPR × Swiss FADP)
+        # -----------------------------------------------------
+        legal_context = {
+            "gdpr_applies": payload.domain in {"banking", "fintech"},
+            "fadp_applies": payload.domain == "banking",
+            "has_consent": getattr(payload, "has_consent", False),
+            "pii_tokenized": pii_token is not None,
+            "rtbf_supported": True,
+        }
 
-    if legal_result["decision"] == Decision.BLOCK:
+        legal_result = cross_verify_lawfulness(legal_context)
+
+        if legal_result["decision"] == Decision.BLOCK:
+            write_audit_log(
+                db=db,
+                document_id=payload.document_id,
+                action="INGEST_BLOCKED",
+                status="REJECTED",
+                actor="system",
+                request_id=request_id,
+                error_code="LEGAL_BLOCK",
+            )
+
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "status": "blocked",
+                    "reasons": legal_result["reasons"],
+                    "request_id": request_id,
+                },
+            )
+
+        # -----------------------------------------------------
+        # Day 25 — Kafka-style ingestion lineage event
+        # -----------------------------------------------------
+        payload_hash = hashlib.sha256(
+            json.dumps(payload.dict(), sort_keys=True).encode()
+        ).hexdigest()
+
+        write_ingestion_event(
+            source="api:/ingest",
+            document_id=payload.document_id,
+            payload_hash=payload_hash,
+            actor="system",
+        )
+
+        # -----------------------------------------------------
+        # Business audit log
+        # -----------------------------------------------------
         write_audit_log(
             db=db,
             document_id=payload.document_id,
-            action="INGEST_BLOCKED",
-            status="REJECTED",
+            action="INGEST_SUCCESS",
+            status="ACCEPTED",
             actor="system",
             request_id=request_id,
-            error_code="LEGAL_BLOCK",
+            # pii_token=pii_token  # include only if schema supports it
         )
-
-        raise HTTPException(
-            status_code=403,
-            detail={
-                "status": "blocked",
-                "reasons": legal_result["reasons"],
-                "request_id": request_id,
-            },
-        )
-
-    # =================================================
-    # Day 25 — Kafka-style ingestion lineage event
-    # =================================================
-    payload_hash = hashlib.sha256(
-        json.dumps(payload.dict(), sort_keys=True).encode()
-    ).hexdigest()
-
-    write_ingestion_event(
-        source="api:/ingest",
-        document_id=payload.document_id,
-        payload_hash=payload_hash,
-        actor="system",
-    )
-
-    # =================================================
-    # Business audit log
-    # =================================================
-    write_audit_log(
-        db=db,
-        document_id=payload.document_id,
-        action="INGEST_SUCCESS",
-        status="ACCEPTED",
-        actor="system",
-        request_id=request_id,
-        # pii_token=pii_token  # include only if schema supports it
-    )
 
     return {
         "status": "accepted",
