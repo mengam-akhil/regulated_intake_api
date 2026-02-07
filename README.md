@@ -98,3 +98,15 @@ Each event contains:
 
 This enables full reconstruction of data origin and satisfies audit and
 data lineage requirements for EU/Swiss RegTech systems.
+## Day 26 — Privacy Shield & PII Anonymization
+
+All personally identifiable information (PII) is tokenized at ingestion
+using non-reversible identifiers.
+
+Raw PII is never stored in business tables or audit logs.
+Instead, systems reference opaque PII tokens.
+
+This design supports:
+- GDPR Art. 5 (data minimization)
+- GDPR Art. 17 (right to be forgotten)
+- Secure anonymization without breaking data integrity
