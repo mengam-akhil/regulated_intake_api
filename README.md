@@ -110,3 +110,16 @@ This design supports:
 - GDPR Art. 5 (data minimization)
 - GDPR Art. 17 (right to be forgotten)
 - Secure anonymization without breaking data integrity
+## Day 27 — Legal Cross-Verification & Agentic Routing
+
+The ingestion pipeline includes a deterministic legal decision router
+that cross-verifies GDPR and Swiss FADP requirements.
+
+The router evaluates:
+- Jurisdiction applicability
+- PII minimization safeguards
+- Right-to-be-forgotten support
+- Lawful basis / consent
+
+Decisions are explicitly routed as ALLOW, REVIEW, or BLOCK with
+human-readable reasons, ensuring explainable and auditable compliance.
