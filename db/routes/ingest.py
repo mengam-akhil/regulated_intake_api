@@ -21,8 +21,9 @@ from core.legal.agentic_router import cross_verify_lawfulness, Decision
 # Day 28 — performance profiling
 from core.performance.profiler import profile_block
 
-# Day 29 — defensive input validation
+# Day 29 — defensive API wrapper
 from core.security.input_guard import validate_input
+
 
 router = APIRouter()
 
@@ -38,33 +39,13 @@ def ingest(
     request_id = str(uuid4())
 
     # =================================================
-    # Day 29 — Defensive input validation (FAIL CLOSED)
+    # Day 29 — Defensive Input Validation (FAIL CLOSED)
     # =================================================
-    try:
-        validate_input(payload.dict())
-    except ValueError as e:
-        write_audit_log(
-            db=db,
-            document_id=None,
-            action="INGEST_BLOCKED",
-            status="REJECTED",
-            actor="system",
-            request_id=request_id,
-            error_code="INPUT_VALIDATION_FAILED",
-        )
+    validate_input(payload)
 
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "status": "blocked",
-                "reason": str(e),
-                "request_id": request_id,
-            },
-        )
-
-    # =================================================
-    # Rule 1 — Invalid document_id
-    # =================================================
+    # -------------------------------------------------
+    # Rule 1: Invalid document_id
+    # -------------------------------------------------
     if payload.document_id <= 0:
         write_audit_log(
             db=db,
@@ -86,9 +67,9 @@ def ingest(
             },
         )
 
-    # =================================================
-    # Rule 2 — Unsupported domain
-    # =================================================
+    # -------------------------------------------------
+    # Rule 2: Unsupported domain
+    # -------------------------------------------------
     if payload.domain not in ALLOWED_DOMAINS:
         write_audit_log(
             db=db,
@@ -111,7 +92,7 @@ def ingest(
         )
 
     # =================================================
-    # Day 28 — Performance profiling (edge-aware)
+    # Day 28 — Profile critical compliance path
     # =================================================
     with profile_block("ingest_pipeline"):
 
@@ -121,7 +102,7 @@ def ingest(
         pii_token = None
         if hasattr(payload, "customer_email") and payload.customer_email:
             pii_token = tokenize_pii(payload.customer_email)
-            # Raw PII stops here
+            # Raw PII is never persisted
 
         # =================================================
         # Day 27 — Legal Cross-Verification (GDPR × FADP)
@@ -180,7 +161,6 @@ def ingest(
             status="ACCEPTED",
             actor="system",
             request_id=request_id,
-            # pii_token=pii_token  # include only if schema supports it
         )
 
     return {
