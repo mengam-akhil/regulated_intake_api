@@ -161,3 +161,56 @@ The system enforces:
 
 This ensures malformed or adversarial input is blocked early,
 logged consistently, and never propagated into downstream systems.
+## Day 30 — End-to-End RegTech Narrative (Security > Features)
+
+This project simulates a production-grade regulated intake system rather
+than a feature-driven AI demo.
+
+The design prioritizes:
+- Security over feature velocity
+- Auditability over automation
+- Deterministic decisions over black-box AI
+- Privacy minimization over data collection
+- Fail-closed behavior over permissive defaults
+
+### End-to-End Flow
+
+1. **Async Regulated Intake**
+   - Requests are accepted via an async FastAPI endpoint
+   - Each request is wrapped in a regulated intake envelope
+   - A unique request_id is generated for traceability
+
+2. **Defensive API Boundary**
+   - All input is validated and guarded before reaching business logic
+   - Malformed or adversarial requests are blocked early (fail-closed)
+
+3. **Domain-Aware Validation**
+   - Requests are routed by domain (e.g., fintech, health)
+   - Each domain applies its own validation rules
+
+4. **Privacy & Data Minimization**
+   - PII is tokenized at ingestion
+   - Raw PII is never stored in business tables or audit logs
+   - Right-to-be-forgotten is supported via token deletion
+
+5. **Legal Cross-Verification**
+   - GDPR and Swiss FADP requirements are evaluated deterministically
+   - Decisions are explicitly routed as ALLOW, REVIEW, or BLOCK
+   - All decisions include human-readable reasons
+
+6. **Immutable Audit & Lineage**
+   - All accepted ingestions emit append-only lineage events
+   - Business audit logs record every decision
+   - All actions are reconstructible end-to-end
+
+7. **Edge-Aware Performance**
+   - Latency and peak memory are measured at critical pipeline stages
+   - The system is designed to run on constrained hardware (≤4GB RAM)
+
+8. **Tested & Shipped Like Financial Software**
+   - Unit tests validate schemas and persistence
+   - CI/CD enforces test success before merge
+   - The repository reflects how regulated software is actually shipped
+
+This repository demonstrates how AI-adjacent systems can be built safely,
+locally, and explainably under real regulatory and hardware constraints.
