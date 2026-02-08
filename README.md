@@ -148,3 +148,16 @@ Protections include:
 
 This ensures a fail-closed posture suitable for production AI systems in
 regulated banking environments.
+## Day 29 — Defensive Engineering at the API Boundary
+
+All incoming requests are defensively validated at the FastAPI boundary
+before reaching business logic or AI components.
+
+The system enforces:
+- Structural validation
+- Conservative length limits
+- Prompt injection pattern detection
+- Explicit fail-closed rejection
+
+This ensures malformed or adversarial input is blocked early,
+logged consistently, and never propagated into downstream systems.
